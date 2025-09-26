@@ -112,10 +112,11 @@ jobs:
             | select(fi == 0) | (eval(strenv(originalPath))) = $mergedArray
             ' tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }} tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
             
-    #   - name: Encode file and set as output
-    #     id: export-result
-    #     run: |
-    #       # 编码的是合并后的文件
-    #       ENCODED_STRING=$(base64 -w 0 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }})
-    #       JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')
-    #       echo "result=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
+      - name: Encode file and set as output
+        id: export-result
+        run: |
+          echo "==== Final merged YAML ===="
+          cat tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
+          ENCODED_STRING=$(base64 -w 0 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }})
+          JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')
+          echo "result=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
