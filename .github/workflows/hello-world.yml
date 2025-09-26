@@ -119,10 +119,10 @@ jobs:
           cat tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
           ENCODED_STRING=$(base64 -w 0 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }})
           JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')
-          echo "result=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
+          echo "${{ steps.prep.outputs.output_id }}=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
 
 
-  create-pr:
+create-pr:
     needs: [fetch-rpms]
     runs-on: ubuntu-latest
     permissions:
@@ -131,61 +131,58 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.1.7
- 
+
       - name: Setup jq
         uses: dcarbone/install-jq-action@v3.2.0
- 
-      # >>>>>>>>>>>> 新增的调试步骤 <<<<<<<<<<<<<<<<
-      - name: Debug - Print Raw fetch-rpms Outputs
-        run: |
-          echo "--- Raw needs.fetch-rpms.outputs ---"
-          echo '${{ toJSON(needs.fetch-rpms.outputs) }}'
-          echo "--- End Raw needs.fetch-rpms.outputs ---"
-          echo "--------------------------------------------------"
-      # >>>>>>>>>>>> 新增的调试步骤结束 <<<<<<<<<<<<<<<<
 
       - name: Restore YAML files from matrix outputs
         run: |
           echo "--- Starting: Restore YAML files from matrix outputs ---"
- 
-          echo "[Step 1/5] Getting the raw JSON output from the 'fetch-rpms' job..."
-          OUTPUTS_JSON='${{ toJSON(needs.fetch-rpms.outputs.result) }}'
-          echo "Raw JSON data:"
-          echo "$OUTPUTS_JSON"
+
+          echo "[Step 1/5] Getting the raw JSON outputs from the 'fetch-rpms' job..."
+          
+          # 直接获取 result_gpu 和 result_nogpu 的输出
+          # 它们已经是字符串形式的 JSON，所以我们需要 fromjson 转换
+          GPU_RAW_OUTPUT='${{ needs.fetch-rpms.outputs.result_gpu }}'
+          NOGPU_RAW_OUTPUT='${{ needs.fetch-rpms.outputs.result_nogpu }}'
+          
+          # 将这两个原始 JSON 字符串解析成 JSON 对象，并组合成一个 JSON 数组
+          OUTPUTS_ARRAY=$(echo "$GPU_RAW_OUTPUT" | jq fromjson && echo "$NOGPU_RAW_OUTPUT" | jq fromjson | jq -s '.')
+
+          echo "Processed JSON Array (should contain two objects):"
+          echo "$OUTPUTS_ARRAY"
           echo "--------------------------------------------------"
- 
+
           echo "[Step 2/5] Using jq to extract Base64 encoded file content..."
-          GPU_B64=$(echo "$OUTPUTS_JSON" | jq -r '.[] | fromjson | select(.file_name=="os-updates.yaml") | .file_content_base_64')
-          NOGPU_B64=$(echo "$OUTPUTS_JSON" | jq -r '.[] | fromjson | select(.file_name=="os-updates--no-gpu.yaml") | .file_content_base_64')
- 
-          # Print a summary of the extracted content to avoid overly long logs
-          echo "Extracted content for 'os-updates.yaml' (first 50 chars): $(echo -n $GPU_B64 | head -c 50)..."
-          echo "Extracted content for 'os-updates--no-gpu.yaml' (first 50 chars): $(echo -n $NOGPU_B64 | head -c 50)..."
+          # 现在 OUTPUTS_ARRAY 是一个真正的 JSON 数组，可以直接查询
+          GPU_B64=$(echo "$OUTPUTS_ARRAY" | jq -r '.[] | select(.file_name=="os-updates.yaml") | .file_content_base_64')
+          NOGPU_B64=$(echo "$OUTPUTS_ARRAY" | jq -r '.[] | select(.file_name=="os-updates--no-gpu.yaml") | .file_content_base_64')
+
+          # 打印一个摘要以供调试
+          echo "Extracted content for 'os-updates.yaml' (first 50 chars): $(echo -n "$GPU_B64" | head -c 50)..."
+          echo "Extracted content for 'os-updates--no-gpu.yaml' (first 50 chars): $(echo -n "$NOGPU_B64" | head -c 50)..."
           echo "--------------------------------------------------"
- 
+
           echo "[Step 3/5] Restoring os-updates.yaml..."
           if [[ -n "$GPU_B64" ]]; then
             echo "$GPU_B64" | base64 --decode > os-updates.yaml
             echo "Successfully created the os-updates.yaml file."
           else
             echo "::error::Failed to find or extract the output content for 'os-updates.yaml'."
-            echo "::error::Please check the 'Raw JSON data' printed above to see why the jq query failed."
             exit 1
           fi
           echo "--------------------------------------------------"
- 
+
           echo "[Step 4/5] Restoring os-updates--no-gpu.yaml..."
           if [[ -n "$NOGPU_B64" ]]; then
             echo "$NOGPU_B64" | base64 --decode > os-updates--no-gpu.yaml
             echo "Successfully created the os-updates--no-gpu.yaml file."
           else
             echo "::error::Failed to find or extract the output content for 'os-updates--no-gpu.yaml'."
-            echo "::error::Please check the 'Raw JSON data' printed above to see why the jq query failed."
             exit 1
           fi
           echo "--------------------------------------------------"
- 
+
           echo "[Step 5/5] Verifying the restored files..."
           ls -l os-updates*.yaml
           echo "--- Finished: YAML files restored successfully ---"
- 
