@@ -16,3 +16,60 @@ jobs:
 
       - name: Say Hello
         run: echo "🎉 Hello, World! GitHub Actions is working!"
+
+  simulate-fetch-rpms:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        gpu-driver: [true, false]
+    outputs:
+      result: ${{ steps.export-result.outputs.result }}
+
+    steps:
+      - name: Prepare dynamic variables
+        id: prep
+        run: |
+          if [[ "${{ matrix.gpu-driver }}" == "true" ]]; then
+            echo "output_file=os-updates.yaml" >> $GITHUB_OUTPUT
+          else
+            echo "output_file=os-updates--no-gpu.yaml" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create dummy YAML file content
+        run: |
+          if [[ "${{ matrix.gpu-driver }}" == "true" ]]; then
+            # 包含 GPU 驱动的 os-updates.yaml 内容
+            cat << 'EOF' > ${{ steps.prep.outputs.output_file }}
+updates:
+  - name: kernel-default
+    version: 6.4.0
+  - name: xz
+    version: 5.4.3
+EOF
+          else
+            # 不包含 GPU 驱动的 os-updates--no-gpu.yaml 内容
+            cat << 'EOF' > ${{ steps.prep.outputs.output_file }}
+updates:
+  - name: coreutils
+    version: "9.4"
+    version: 1.14.93
+  - name: zypper-needs-restarting
+    version: 1.14.93
+EOF
+          fi
+
+      - name: Verify file was created in this matrix job
+        run: |
+          echo "文件在此矩阵作业中已创建："
+          ls -l ${{ steps.prep.outputs.output_file }}
+
+      - name: 编码文件并设置为输出
+        id: export-result
+        run: |
+          # 将文件内容进行 Base64 编码，-w 0 表示不换行
+          ENCODED_STRING=$(base64 -w 0 ${{ steps.prep.outputs.output_file }})
+          # 使用 jq 创建一个 JSON 字符串，包含文件名和 Base64 编码后的文件内容
+          JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')
+          # 将 JSON 负载设置为此步骤的输出，以便其他作业可以访问
+          echo "result=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
