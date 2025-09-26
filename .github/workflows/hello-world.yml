@@ -135,6 +135,15 @@ jobs:
       - name: Setup jq
         uses: dcarbone/install-jq-action@v3.2.0
  
+      # >>>>>>>>>>>> 新增的调试步骤 <<<<<<<<<<<<<<<<
+      - name: Debug - Print Raw fetch-rpms Outputs
+        run: |
+          echo "--- Raw needs.fetch-rpms.outputs ---"
+          echo '${{ toJSON(needs.fetch-rpms.outputs) }}'
+          echo "--- End Raw needs.fetch-rpms.outputs ---"
+          echo "--------------------------------------------------"
+      # >>>>>>>>>>>> 新增的调试步骤结束 <<<<<<<<<<<<<<<<
+
       - name: Restore YAML files from matrix outputs
         run: |
           echo "--- Starting: Restore YAML files from matrix outputs ---"
