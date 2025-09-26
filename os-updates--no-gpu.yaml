@@ -1,0 +1,59 @@
+updates:
+  - name: coreutils
+    version: "9.4"
+  - name: coreutils-systemd
+    version: "9.4"
+  - name: curl
+    version: 8.14.1
+  - name: dracut
+    version: 059+suse.639.g19f24feb
+  - name: dracut-fips
+    version: 059+suse.639.g19f24feb
+  - name: libcurl4
+    version: 8.14.1
+  - name: liblzma5
+    version: 5.4.3
+  - name: libpolkit-agent-1-0
+    version: "121"
+  - name: libpolkit-gobject-1-0
+    version: "121"
+  - name: libprotobuf23_4_0
+    version: "23.4"
+  - name: libsqlite3-0
+    version: 3.50.2
+  - name: libssh-config
+    version: 0.10.6
+  - name: libssh4
+    version: 0.10.6
+  - name: libsystemd0
+    version: "254.27"
+  - name: libtss2-tcti-tabrmd0
+    version: 3.0.0
+  - name: libudev1
+    version: "254.27"
+  - name: libzypp
+    version: 17.37.17
+  - name: polkit
+    version: "121"
+  - name: selinux-policy
+    version: 20241031+git8.1f94e96d
+  - name: selinux-policy-targeted
+    version: 20241031+git8.1f94e96d
+  - name: systemd
+    version: "254.27"
+  - name: systemd-coredump
+    version: "254.27"
+  - name: tpm2.0-abrmd
+    version: 3.0.0
+  - name: ucode-intel
+    version: "20250812"
+  - name: udev
+    version: "254.27"
+  - name: update-alternatives
+    version: 1.22.0
+  - name: xz
+    version: 5.4.3
+  - name: zypper
+    version: 1.14.93
+  - name: zypper-needs-restarting
+    version: 1.14.93
