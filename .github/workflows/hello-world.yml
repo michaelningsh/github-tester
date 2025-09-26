@@ -52,72 +52,70 @@ jobs:
           if [[ "${{ matrix.gpu-driver }}" == "true" ]]; then
             SUFFIX=""
             TYPE="gpu"
-            # 模拟的 os-updates.yaml 和 updates.xml 路径
-            echo "initial_os_updates_yaml=mock_data/os-updates.yaml" >> $GITHUB_OUTPUT
-            echo "mock_updates_xml=mock_data/updates_gpu.xml" >> $GITHUB_OUTPUT
+            echo "initial_os_updates_yaml=./os-updates.yaml" >> $GITHUB_OUTPUT
+            echo "mock_updates_xml=./mock_data/updates_gpu.xml" >> $GITHUB_OUTPUT
           else
             SUFFIX="--no-gpu"
             TYPE="no-gpu"
-            # 模拟的 os-updates--no-gpu.yaml 和 updates.xml 路径
-            echo "initial_os_updates_yaml=mock_data/os-updates--no-gpu.yaml" >> $GITHUB_OUTPUT
-            echo "mock_updates_xml=mock_data/updates_no_gpu.xml" >> $GITHUB_OUTPUT
+            echo "initial_os_updates_yaml=./os-updates--no-gpu.yaml" >> $GITHUB_OUTPUT
+            echo "mock_updates_xml=./mock_data/updates_no_gpu.xml" >> $GITHUB_OUTPUT
           fi
           echo "image_suffix=${SUFFIX}" >> $GITHUB_OUTPUT
           echo "image_type=${TYPE}" >> $GITHUB_OUTPUT
           echo "base_image=lws-base-image${SUFFIX}" >> $GITHUB_OUTPUT
           echo "output_file=os-updates${SUFFIX}.yaml" >> $GITHUB_OUTPUT # 这是最终输出的合并文件
 
-      - name: Prepare workdir
-        run: mkdir -p ./tmp/${{ steps.prep.outputs.image_type }}/output
-        # 还要创建初始的 os-updates.yaml 文件到期望的位置，以便后续合并
-        # 这里假设 `output_file` 是最终被 Base64 编码的文件名，
-        # 且我们希望把原始文件复制到 `tmp/${{ steps.prep.outputs.image_type }}/` 下，并以 `output_file` 命名
-        # 因为 `Merge existing with new OS updates` 步骤中 `eval(strenv(originalPath))` 引用的是 ${{ steps.prep.outputs.output_file }}
-        # 我们需要确保这个文件存在
-          cp ${{ steps.prep.outputs.initial_os_updates_yaml }} ./tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
+    #   - name: Prepare workdir
+    #     run: mkdir -p ./tmp/${{ steps.prep.outputs.image_type }}/output
+    #     # 还要创建初始的 os-updates.yaml 文件到期望的位置，以便后续合并
+    #     # 这里假设 `output_file` 是最终被 Base64 编码的文件名，
+    #     # 且我们希望把原始文件复制到 `tmp/${{ steps.prep.outputs.image_type }}/` 下，并以 `output_file` 命名
+    #     # 因为 `Merge existing with new OS updates` 步骤中 `eval(strenv(originalPath))` 引用的是 ${{ steps.prep.outputs.output_file }}
+    #     # 我们需要确保这个文件存在
+    #       cp ${{ steps.prep.outputs.initial_os_updates_yaml }} ./tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
 
-      # 移除 Download and decompress RAW image from Artifactory
+    #   # 移除 Download and decompress RAW image from Artifactory
 
-      # 移除 Build Docker image from rootfs
+    #   # 移除 Build Docker image from rootfs
 
-      - name: Simulate Run list-os-updates.sh in container (copy mock XML)
-        run: |
-          # 直接将模拟的 updates.xml 复制到 /output 目录
-          cp ${{ steps.prep.outputs.mock_updates_xml }} ./tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
-          echo "[✓] Simulated. RPM update list is in tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml"
+    #   - name: Simulate Run list-os-updates.sh in container (copy mock XML)
+    #     run: |
+    #       # 直接将模拟的 updates.xml 复制到 /output 目录
+    #       cp ${{ steps.prep.outputs.mock_updates_xml }} ./tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
+    #       echo "[✓] Simulated. RPM update list is in tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml"
 
-      - name: Convert new updates to Yaml
-        id: convert
-        uses: mikefarah/yq@v4.46.1
-        with:
-          cmd: |
-            yq -px -oy '{"updates": [.stream.update-status.update-list.update[] | {"name": .["+@name"], "version": .["+@edition"] | split("-") | .[0] }]}' \
-              tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
+    #   - name: Convert new updates to Yaml
+    #     id: convert
+    #     uses: mikefarah/yq@v4.46.1
+    #     with:
+    #       cmd: |
+    #         yq -px -oy '{"updates": [.stream.update-status.update-list.update[] | {"name": .["+@name"], "version": .["+@edition"] | split("-") | .[0] }]}' \
+    #           tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
  
-      - name: Save updates.yaml
-        run: |
-          echo '${{ steps.convert.outputs.result }}' \
-            > tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
+    #   - name: Save updates.yaml
+    #     run: |
+    #       echo '${{ steps.convert.outputs.result }}' \
+    #         > tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
             
-      - name: Merge existing with new OS updates
-        uses: mikefarah/yq@v4.46.1
-        with:
-          cmd: |
-            idPath=".name"  originalPath=".updates"  otherPath=".updates" yq eval-all --inplace '
-            (
-              (( (eval(strenv(originalPath)) + eval(strenv(otherPath)))  | .[] | {(eval(strenv(idPath))):  .}) as $item ireduce ({}; . * $item )) as $uniqueMap
-              | ( $uniqueMap  | to_entries | .[]) as $item ireduce([]; . + $item.value)
-            ) as $mergedArray
-            | select(fi == 0) | (eval(strenv(originalPath))) = $mergedArray
-            ' tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }} tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
-            # 注意：这里 originalPath 应该指向之前复制过来的初始文件
-            # 也就是 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
-            # 确保 yq 的输入路径是正确的
+    #   - name: Merge existing with new OS updates
+    #     uses: mikefarah/yq@v4.46.1
+    #     with:
+    #       cmd: |
+    #         idPath=".name"  originalPath=".updates"  otherPath=".updates" yq eval-all --inplace '
+    #         (
+    #           (( (eval(strenv(originalPath)) + eval(strenv(otherPath)))  | .[] | {(eval(strenv(idPath))):  .}) as $item ireduce ({}; . * $item )) as $uniqueMap
+    #           | ( $uniqueMap  | to_entries | .[]) as $item ireduce([]; . + $item.value)
+    #         ) as $mergedArray
+    #         | select(fi == 0) | (eval(strenv(originalPath))) = $mergedArray
+    #         ' tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }} tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
+    #         # 注意：这里 originalPath 应该指向之前复制过来的初始文件
+    #         # 也就是 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
+    #         # 确保 yq 的输入路径是正确的
 
-      - name: Encode file and set as output
-        id: export-result
-        run: |
-          # 编码的是合并后的文件
-          ENCODED_STRING=$(base64 -w 0 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }})
-          JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')
-          echo "result=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
+    #   - name: Encode file and set as output
+    #     id: export-result
+    #     run: |
+    #       # 编码的是合并后的文件
+    #       ENCODED_STRING=$(base64 -w 0 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }})
+    #       JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')
+    #       echo "result=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
