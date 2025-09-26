@@ -121,8 +121,7 @@ jobs:
           JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')
           echo "${{ steps.prep.outputs.output_id }}=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
 
-
-create-pr:
+  create-pr:
     needs: [fetch-rpms]
     runs-on: ubuntu-latest
     permissions:
