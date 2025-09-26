@@ -40,11 +40,11 @@ jobs:
       #     JF_USER: ${{ secrets.ARTIFACTORY_USERNAME }}
       #     JF_PASSWORD: ${{ secrets.ARTIFACTORY_APIKEY }}
 
-      # 模拟时不需要安装这些工具
-      # - name: Install dependencies
-      #   run: |
-      #     sudo apt-get update
-      #     sudo apt-get install -y libguestfs-tools
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libguestfs-tools
+          sudo apt-get install -y tree
 
       - name: Prepare dynamic variables
         id: prep
@@ -78,9 +78,6 @@ jobs:
       # 移除 Download and decompress RAW image from Artifactory
 
       # 移除 Build Docker image from rootfs
-
-      - name: Install tree
-        run: sudo apt-get update && sudo apt-get install -y tree
         
       - name: Simulate Run list-os-updates.sh in container (copy mock XML)
         run: |
@@ -114,7 +111,7 @@ jobs:
             ) as $mergedArray
             | select(fi == 0) | (eval(strenv(originalPath))) = $mergedArray
             ' tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }} tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
-
+            
     #   - name: Encode file and set as output
     #     id: export-result
     #     run: |
