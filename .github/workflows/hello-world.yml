@@ -103,20 +103,17 @@ jobs:
             > tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
           tree tmp/${{ steps.prep.outputs.image_type }}/
             
-    #   - name: Merge existing with new OS updates
-    #     uses: mikefarah/yq@v4.46.1
-    #     with:
-    #       cmd: |
-    #         idPath=".name"  originalPath=".updates"  otherPath=".updates" yq eval-all --inplace '
-    #         (
-    #           (( (eval(strenv(originalPath)) + eval(strenv(otherPath)))  | .[] | {(eval(strenv(idPath))):  .}) as $item ireduce ({}; . * $item )) as $uniqueMap
-    #           | ( $uniqueMap  | to_entries | .[]) as $item ireduce([]; . + $item.value)
-    #         ) as $mergedArray
-    #         | select(fi == 0) | (eval(strenv(originalPath))) = $mergedArray
-    #         ' tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }} tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
-    #         # 注意：这里 originalPath 应该指向之前复制过来的初始文件
-    #         # 也就是 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
-    #         # 确保 yq 的输入路径是正确的
+      - name: Merge existing with new OS updates
+        uses: mikefarah/yq@v4.46.1
+        with:
+          cmd: |
+            idPath=".name"  originalPath=".updates"  otherPath=".updates" yq eval-all --inplace '
+            (
+              (( (eval(strenv(originalPath)) + eval(strenv(otherPath)))  | .[] | {(eval(strenv(idPath))):  .}) as $item ireduce ({}; . * $item )) as $uniqueMap
+              | ( $uniqueMap  | to_entries | .[]) as $item ireduce([]; . + $item.value)
+            ) as $mergedArray
+            | select(fi == 0) | (eval(strenv(originalPath))) = $mergedArray
+            ' tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }} tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
 
     #   - name: Encode file and set as output
     #     id: export-result
