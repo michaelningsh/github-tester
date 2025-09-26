@@ -89,18 +89,19 @@ jobs:
           echo "[✓] Simulated. RPM update list is in tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml"
           tree tmp/${{ steps.prep.outputs.image_type }}/
 
-    #   - name: Convert new updates to Yaml
-    #     id: convert
-    #     uses: mikefarah/yq@v4.46.1
-    #     with:
-    #       cmd: |
-    #         yq -px -oy '{"updates": [.stream.update-status.update-list.update[] | {"name": .["+@name"], "version": .["+@edition"] | split("-") | .[0] }]}' \
-    #           tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
+      - name: Convert new updates to Yaml
+        id: convert
+        uses: mikefarah/yq@v4.46.1
+        with:
+          cmd: |
+            yq -px -oy '{"updates": [.stream.update-status.update-list.update[] | {"name": .["+@name"], "version": .["+@edition"] | split("-") | .[0] }]}' \
+              tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
  
-    #   - name: Save updates.yaml
-    #     run: |
-    #       echo '${{ steps.convert.outputs.result }}' \
-    #         > tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
+      - name: Save updates.yaml
+        run: |
+          echo '${{ steps.convert.outputs.result }}' \
+            > tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
+          tree tmp/${{ steps.prep.outputs.image_type }}/
             
     #   - name: Merge existing with new OS updates
     #     uses: mikefarah/yq@v4.46.1
