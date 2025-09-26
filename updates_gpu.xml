@@ -1,0 +1,15 @@
+<stream>
+  <update-status>
+    <update-list>
+      <update name="kernel-default" edition="6.4.0-1.1">
+        <summary>New kernel version</summary>
+      </update>
+      <update name="xz" edition="5.4.3-1.1">
+        <summary>New xz compression utility</summary>
+      </update>
+      <update name="some-other-package" edition="1.0.0-1.1">
+        <summary>Some other update</summary>
+      </update>
+    </update-list>
+  </update-status>
+</stream>

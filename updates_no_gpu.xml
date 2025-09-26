@@ -1,0 +1,15 @@
+<stream>
+  <update-status>
+    <update-list>
+      <update name="coreutils" edition="9.4-1.1">
+        <summary>New coreutils version</summary>
+      </update>
+      <update name="zypper-needs-restarting" edition="1.14.93-1.1">
+        <summary>New zypper version</summary>
+      </update>
+      <update name="another-no-gpu-package" edition="2.0.0-1.1">
+        <summary>Another update</summary>
+      </update>
+    </update-list>
+  </update-status>
+</stream>

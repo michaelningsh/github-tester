@@ -27,37 +27,97 @@ jobs:
       result: ${{ steps.export-result.outputs.result }}
 
     steps:
-      - name: Checkout repository # 必须先检出仓库才能访问文件
-        uses: actions/checkout@v4
+      - name: Checkout # 必须先检出仓库才能访问模拟文件
+        uses: actions/checkout@v4 # 使用 v4 或您指定的 SHA
+        with:
+          fetch-depth: 0
 
-      - name: Prepare dynamic variables and select file
+      # 模拟时不需要 JFrog CLI，如果其他部分需要可以保留
+      # - name: Setup JFrog CLI
+      #   uses: jfrog/setup-jfrog-cli@v4
+      #   env:
+      #     JF_URL: https://artifactory-ehv.ta.philips.com/
+      #     JF_USER: ${{ secrets.ARTIFACTORY_USERNAME }}
+      #     JF_PASSWORD: ${{ secrets.ARTIFACTORY_APIKEY }}
+
+      # 模拟时不需要安装这些工具
+      # - name: Install dependencies
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y libguestfs-tools
+
+      - name: Prepare dynamic variables
         id: prep
         run: |
           if [[ "${{ matrix.gpu-driver }}" == "true" ]]; then
-            echo "selected_file_path=os-updates.yaml" >> $GITHUB_OUTPUT # 假设文件在仓库根目录
+            SUFFIX=""
+            TYPE="gpu"
+            # 模拟的 os-updates.yaml 和 updates.xml 路径
+            echo "initial_os_updates_yaml=mock_data/os-updates.yaml" >> $GITHUB_OUTPUT
+            echo "mock_updates_xml=mock_data/updates_gpu.xml" >> $GITHUB_OUTPUT
           else
-            echo "selected_file_path=os-updates--no-gpu.yaml" >> $GITHUB_OUTPUT # 假设文件在仓库根目录
+            SUFFIX="--no-gpu"
+            TYPE="no-gpu"
+            # 模拟的 os-updates--no-gpu.yaml 和 updates.xml 路径
+            echo "initial_os_updates_yaml=mock_data/os-updates--no-gpu.yaml" >> $GITHUB_OUTPUT
+            echo "mock_updates_xml=mock_data/updates_no_gpu.xml" >> $GITHUB_OUTPUT
           fi
-          # 同时输出文件名（不含路径），以便后续 JSON 使用
-          echo "output_file=$(basename ${{ steps.prep.outputs.selected_file_path }})" >> $GITHUB_OUTPUT
+          echo "image_suffix=${SUFFIX}" >> $GITHUB_OUTPUT
+          echo "image_type=${TYPE}" >> $GITHUB_OUTPUT
+          echo "base_image=lws-base-image${SUFFIX}" >> $GITHUB_OUTPUT
+          echo "output_file=os-updates${SUFFIX}.yaml" >> $GITHUB_OUTPUT # 这是最终输出的合并文件
 
-      - name: Verify selected file exists
+      - name: Prepare workdir
+        run: mkdir -p ./tmp/${{ steps.prep.outputs.image_type }}/output
+        # 还要创建初始的 os-updates.yaml 文件到期望的位置，以便后续合并
+        # 这里假设 `output_file` 是最终被 Base64 编码的文件名，
+        # 且我们希望把原始文件复制到 `tmp/${{ steps.prep.outputs.image_type }}/` 下，并以 `output_file` 命名
+        # 因为 `Merge existing with new OS updates` 步骤中 `eval(strenv(originalPath))` 引用的是 ${{ steps.prep.outputs.output_file }}
+        # 我们需要确保这个文件存在
+          cp ${{ steps.prep.outputs.initial_os_updates_yaml }} ./tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
+
+      # 移除 Download and decompress RAW image from Artifactory
+
+      # 移除 Build Docker image from rootfs
+
+      - name: Simulate Run list-os-updates.sh in container (copy mock XML)
         run: |
-          echo "选择的文件路径：${{ steps.prep.outputs.selected_file_path }}"
-          if [ -f "${{ steps.prep.outputs.selected_file_path }}" ]; then
-            echo "文件存在！内容预览："
-            cat ${{ steps.prep.outputs.selected_file_path }}
-          else
-            echo "错误：文件 '${{ steps.prep.outputs.selected_file_path }}' 不存在！"
-            exit 1
-          fi
+          # 直接将模拟的 updates.xml 复制到 /output 目录
+          cp ${{ steps.prep.outputs.mock_updates_xml }} ./tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
+          echo "[✓] Simulated. RPM update list is in tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml"
 
-      - name: 编码文件并设置为输出
+      - name: Convert new updates to Yaml
+        id: convert
+        uses: mikefarah/yq@v4.46.1
+        with:
+          cmd: |
+            yq -px -oy '{"updates": [.stream.update-status.update-list.update[] | {"name": .["+@name"], "version": .["+@edition"] | split("-") | .[0] }]}' \
+              tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
+ 
+      - name: Save updates.yaml
+        run: |
+          echo '${{ steps.convert.outputs.result }}' \
+            > tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
+            
+      - name: Merge existing with new OS updates
+        uses: mikefarah/yq@v4.46.1
+        with:
+          cmd: |
+            idPath=".name"  originalPath=".updates"  otherPath=".updates" yq eval-all --inplace '
+            (
+              (( (eval(strenv(originalPath)) + eval(strenv(otherPath)))  | .[] | {(eval(strenv(idPath))):  .}) as $item ireduce ({}; . * $item )) as $uniqueMap
+              | ( $uniqueMap  | to_entries | .[]) as $item ireduce([]; . + $item.value)
+            ) as $mergedArray
+            | select(fi == 0) | (eval(strenv(originalPath))) = $mergedArray
+            ' tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }} tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
+            # 注意：这里 originalPath 应该指向之前复制过来的初始文件
+            # 也就是 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
+            # 确保 yq 的输入路径是正确的
+
+      - name: Encode file and set as output
         id: export-result
         run: |
-          # 从选择的文件路径读取内容并进行 Base64 编码
-          ENCODED_STRING=$(base64 -w 0 "${{ steps.prep.outputs.selected_file_path }}")
-          # 使用 jq 创建一个 JSON 字符串，包含文件名和 Base64 编码后的文件内容
+          # 编码的是合并后的文件
+          ENCODED_STRING=$(base64 -w 0 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }})
           JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')
-          # 将 JSON 负载设置为此步骤的输出
           echo "result=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
