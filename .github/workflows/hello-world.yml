@@ -65,14 +65,14 @@ jobs:
           echo "base_image=lws-base-image${SUFFIX}" >> $GITHUB_OUTPUT
           echo "output_file=os-updates${SUFFIX}.yaml" >> $GITHUB_OUTPUT # 这是最终输出的合并文件
 
-    #   - name: Prepare workdir
-    #     run: mkdir -p ./tmp/${{ steps.prep.outputs.image_type }}/output
-    #     # 还要创建初始的 os-updates.yaml 文件到期望的位置，以便后续合并
-    #     # 这里假设 `output_file` 是最终被 Base64 编码的文件名，
-    #     # 且我们希望把原始文件复制到 `tmp/${{ steps.prep.outputs.image_type }}/` 下，并以 `output_file` 命名
-    #     # 因为 `Merge existing with new OS updates` 步骤中 `eval(strenv(originalPath))` 引用的是 ${{ steps.prep.outputs.output_file }}
-    #     # 我们需要确保这个文件存在
-    #       cp ${{ steps.prep.outputs.initial_os_updates_yaml }} ./tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
+      - name: Prepare workdir
+        run: mkdir -p ./tmp/${{ steps.prep.outputs.image_type }}/output
+        # 还要创建初始的 os-updates.yaml 文件到期望的位置，以便后续合并
+        # 这里假设 `output_file` 是最终被 Base64 编码的文件名，
+        # 且我们希望把原始文件复制到 `tmp/${{ steps.prep.outputs.image_type }}/` 下，并以 `output_file` 命名
+        # 因为 `Merge existing with new OS updates` 步骤中 `eval(strenv(originalPath))` 引用的是 ${{ steps.prep.outputs.output_file }}
+        # 我们需要确保这个文件存在
+          cp ${{ steps.prep.outputs.initial_os_updates_yaml }} ./tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
 
     #   # 移除 Download and decompress RAW image from Artifactory
 
