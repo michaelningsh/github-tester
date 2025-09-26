@@ -1,0 +1,468 @@
+name: "TEST - Matrix Data Passing"
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ETAPA 1: SIMULAR o trabalho da matriz que cria dois arquivos diferentes.
+  simulate-fetch-rpms:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        gpu-driver: [true, false]
+    outputs:
+      result: ${{ steps.export-result.outputs.result }}
+
+    steps:
+      - name: Prepare dynamic variables
+        id: prep
+        run: |
+          if [[ "${{ matrix.gpu-driver }}" == "true" ]]; then
+            echo "output_file=os-updates.yaml" >> $GITHUB_OUTPUT
+          else
+            echo "output_file=os-updates--no-gpu.yaml" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create dummy YAML file content
+        run: |
+          if [[ "${{ matrix.gpu-driver }}" == "true" ]]; then
+            # Conteúdo para os-updates.yaml
+            cat << 'EOF' > ${{ steps.prep.outputs.output_file }}
+updates:
+  - name: kernel-default
+    version: 6.4.0
+  - name: NetworkManager
+    version: 1.42.6
+  - name: NetworkManager-tui
+    version: 1.42.6
+  - name: SL-Micro-release
+    version: "6.1"
+  - name: aardvark-dns
+    version: 1.12.2
+  - name: ca-certificates-mozilla
+    version: "2.74"
+  - name: container-selinux
+    version: 2.236.0
+  - name: curl
+    version: 8.14.1
+  - name: dracut
+    version: 059+suse.639.g19f24feb
+  - name: dracut-fips
+    version: 059+suse.639.g19f24feb
+  - name: dracut-kiwi-lib
+    version: 10.2.29
+  - name: dracut-kiwi-oem-dump
+    version: 10.2.29
+  - name: dracut-kiwi-oem-repart
+    version: 10.2.29
+  - name: findutils
+    version: 4.9.0
+  - name: gettext-runtime
+    version: 0.21.1
+  - name: glib2-tools
+    version: 2.78.6
+  - name: glibc
+    version: "2.38"
+  - name: glibc-locale-base
+    version: "2.38"
+  - name: gpg2
+    version: 2.4.4
+  - name: gptfdisk
+    version: 1.0.9
+  - name: ignition
+    version: 2.19.0
+  - name: iptables
+    version: 1.8.9
+  - name: iputils
+    version: "20221126"
+  - name: irqbalance
+    version: 1.9.4.0.git+f8b8cdd
+  - name: kernel-firmware-all
+    version: "20241128"
+  - name: kernel-firmware-amdgpu
+    version: "20241128"
+  - name: kernel-firmware-ath10k
+    version: "20241128"
+  - name: kernel-firmware-ath11k
+    version: "20241128"
+  - name: kernel-firmware-ath12k
+    version: "20241128"
+  - name: kernel-firmware-atheros
+    version: "20241128"
+  - name: kernel-firmware-bluetooth
+    version: "20241128"
+  - name: kernel-firmware-bnx2
+    version: "20241128"
+  - name: kernel-firmware-brcm
+    version: "20241128"
+  - name: kernel-firmware-chelsio
+    version: "20241128"
+  - name: kernel-firmware-dpaa2
+    version: "20241128"
+  - name: kernel-firmware-i915
+    version: "20241128"
+  - name: kernel-firmware-intel
+    version: "20241128"
+  - name: kernel-firmware-iwlwifi
+    version: "20241128"
+  - name: kernel-firmware-liquidio
+    version: "20241128"
+  - name: kernel-firmware-marvell
+    version: "20241128"
+  - name: kernel-firmware-media
+    version: "20241128"
+  - name: kernel-firmware-mediatek
+    version: "20241128"
+  - name: kernel-firmware-mellanox
+    version: "20241128"
+  - name: kernel-firmware-mwifiex
+    version: "20241128"
+  - name: kernel-firmware-network
+    version: "20241128"
+  - name: kernel-firmware-nfp
+    version: "20241128"
+  - name: kernel-firmware-nvidia
+    version: "20241128"
+  - name: kernel-firmware-platform
+    version: "20241128"
+  - name: kernel-firmware-prestera
+    version: "20241128"
+  - name: kernel-firmware-qcom
+    version: "20241128"
+  - name: kernel-firmware-qlogic
+    version: "20241128"
+  - name: kernel-firmware-radeon
+    version: "20241128"
+  - name: kernel-firmware-realtek
+    version: "20241128"
+  - name: kernel-firmware-serial
+    version: "20241128"
+  - name: kernel-firmware-sound
+    version: "20241128"
+  - name: kernel-firmware-ti
+    version: "20241128"
+  - name: kernel-firmware-ueagle
+    version: "20241128"
+  - name: kernel-firmware-usb-network
+    version: "20241128"
+  - name: krb5
+    version: 1.21.3
+  - name: lastlog2
+    version: 2.40.4
+  - name: less
+    version: "668"
+  - name: libabsl2308_0_0
+    version: "20230802.1"
+  - name: libaugeas0
+    version: 1.14.1
+  - name: libblkid1
+    version: 2.40.4
+  - name: libcurl4
+    version: 8.14.1
+  - name: libexpat1
+    version: 2.7.1
+  - name: libfa1
+    version: 1.14.1
+  - name: libfdisk1
+    version: 2.40.4
+  - name: libfreetype6
+    version: 2.13.3
+  - name: libgcc_s1
+    version: 14.3.0+git11799
+  - name: libgcrypt20
+    version: 1.10.3
+  - name: libgio-2_0-0
+    version: 2.78.6
+  - name: libglib-2_0-0
+    version: 2.78.6
+  - name: libgmodule-2_0-0
+    version: 2.78.6
+  - name: libgnutls30
+    version: 3.8.3
+  - name: libgobject-2_0-0
+    version: 2.78.6
+  - name: libip4tc2
+    version: 1.8.9
+  - name: libip6tc2
+    version: 1.8.9
+  - name: liblastlog2-2
+    version: 2.40.4
+  - name: libmount1
+    version: 2.40.4
+  - name: libnm0
+    version: 1.42.6
+  - name: libopenssl3
+    version: 3.1.4
+  - name: libpython3_11-1_0
+    version: 3.11.13
+  - name: libsmartcols1
+    version: 2.40.4
+  - name: libsolv-tools-base
+    version: 0.7.34
+  - name: libsqlite3-0
+    version: 3.50.2
+  - name: libstdc++6
+    version: 14.3.0+git11799
+  - name: libsystemd0
+    version: "254.27"
+  - name: libtasn1-6
+    version: 4.19.0
+  - name: libtextstyle0
+    version: 0.21.1
+  - name: libudev1
+    version: "254.27"
+  - name: libuuid1
+    version: 2.40.4
+  - name: libxml2-2
+    version: 2.11.6
+  - name: libxml2-tools
+    version: 2.11.6
+  - name: libxtables12
+    version: 1.8.9
+  - name: libxxhash0
+    version: 0.8.1
+  - name: libzypp
+    version: 17.37.17
+  - name: lsof
+    version: 4.99.4
+  - name: microos-tools
+    version: 2.21+git24
+  - name: netavark
+    version: 1.12.2
+  - name: openssh
+    version: 9.6p1
+  - name: openssh-clients
+    version: 9.6p1
+  - name: openssh-common
+    version: 9.6p1
+  - name: openssh-fips
+    version: 9.6p1
+  - name: openssh-server
+    version: 9.6p1
+  - name: openssl-3
+    version: 3.1.4
+  - name: pam
+    version: 1.6.1
+  - name: pam-config
+    version: 2.11+git.20240906
+  - name: pam_u2f
+    version: 1.3.0
+  - name: passt
+    version: 20240906.6b38f07
+  - name: passt-selinux
+    version: 20240906.6b38f07
+  - name: perl-base
+    version: 5.38.2
+  - name: podman
+    version: 5.2.5
+  - name: python311
+    version: 3.11.13
+  - name: python311-base
+    version: 3.11.13
+  - name: python311-setuptools
+    version: 70.0.0
+  - name: rpm
+    version: 4.18.0
+  - name: rsync
+    version: 3.3.0
+  - name: selinux-policy
+    version: 20241031+git8.1f94e96d
+  - name: selinux-policy-targeted
+    version: 20241031+git8.1f94e96d
+  - name: sudo
+    version: 1.9.15p5
+  - name: supportutils
+    version: 3.2.10
+  - name: suse-build-key
+    version: "12.0"
+  - name: suseconnect-ng
+    version: 1.13.0
+  - name: systemd
+    version: "254.27"
+  - name: systemd-coredump
+    version: "254.27"
+  - name: typelib-1_0-NM-1_0
+    version: 1.42.6
+  - name: ucode-amd
+    version: "20241128"
+  - name: ucode-intel
+    version: "20250812"
+  - name: udev
+    version: "254.27"
+  - name: util-linux
+    version: 2.40.4
+  - name: util-linux-systemd
+    version: 2.40.4
+  - name: xtables-plugins
+    version: 1.8.9
+  - name: zypper
+    version: 1.14.93
+  - name: zypper-needs-restarting
+    version: 1.14.93
+  - name: coreutils
+    version: "9.4"
+  - name: coreutils-systemd
+    version: "9.4"
+  - name: liblzma5
+    version: 5.4.3
+  - name: libpolkit-agent-1-0
+    version: "121"
+  - name: libpolkit-gobject-1-0
+    version: "121"
+  - name: libprotobuf23_4_0
+    version: "23.4"
+  - name: libssh-config
+    version: 0.10.6
+  - name: libssh4
+    version: 0.10.6
+  - name: libtss2-tcti-tabrmd0
+    version: 3.0.0
+  - name: polkit
+    version: "121"
+  - name: tpm2.0-abrmd
+    version: 3.0.0
+  - name: update-alternatives
+    version: 1.22.0
+  - name: xz
+    version: 5.4.3
+EOF
+          else
+            # Conteúdo para os-updates--no-gpu.yaml
+            cat << 'EOF' > ${{ steps.prep.outputs.output_file }}
+updates:
+  - name: coreutils
+    version: "9.4"
+  - name: coreutils-systemd
+    version: "9.4"
+  - name: curl
+    version: 8.14.1
+  - name: dracut
+    version: 059+suse.639.g19f24feb
+  - name: dracut-fips
+    version: 059+suse.639.g19f24feb
+  - name: libcurl4
+    version: 8.14.1
+  - name: liblzma5
+    version: 5.4.3
+  - name: libpolkit-agent-1-0
+    version: "121"
+  - name: libpolkit-gobject-1-0
+    version: "121"
+  - name: libprotobuf23_4_0
+    version: "23.4"
+  - name: libsqlite3-0
+    version: 3.50.2
+  - name: libssh-config
+    version: 0.10.6
+  - name: libssh4
+    version: 0.10.6
+  - name: libsystemd0
+    version: "254.27"
+  - name: libtss2-tcti-tabrmd0
+    version: 3.0.0
+  - name: libudev1
+    version: "254.27"
+  - name: libzypp
+    version: 17.37.17
+  - name: polkit
+    version: "121"
+  - name: selinux-policy
+    version: 20241031+git8.1f94e96d
+  - name: selinux-policy-targeted
+    version: 20241031+git8.1f94e96d
+  - name: systemd
+    version: "254.27"
+  - name: systemd-coredump
+    version: "254.27"
+  - name: tpm2.0-abrmd
+    version: 3.0.0
+  - name: ucode-intel
+    version: "20250812"
+  - name: udev
+    version: "254.27"
+  - name: update-alternatives
+    version: 1.22.0
+  - name: xz
+    version: 5.4.3
+  - name: zypper
+    version: 1.14.93
+  - name: zypper-needs-restarting
+    version: 1.14.93
+EOF
+          fi
+
+      - name: Verify file was created in this matrix job
+        run: |
+          echo "Arquivo criado nesta execução da matriz:"
+          ls -l ${{ steps.prep.outputs.output_file }}
+
+      - name: Encode file and set as output
+        id: export-result
+        run: |
+          ENCODED_STRING=$(base64 -w 0 ${{ steps.prep.outputs.output_file }})
+          JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')
+          echo "result=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
+          
+  # ETAPA 2: O TRABALHO "COLETOR". Ele espera por TODOS os trabalhos da matriz,
+  # em seguida, combina com segurança suas saídas em um único array JSON limpo.
+  combine-outputs:
+    runs-on: ubuntu-latest
+    needs: simulate-fetch-rpms
+    outputs:
+      all_results: ${{ steps.combine.outputs.json_string }}
+    steps:
+      - name: Combine matrix outputs into a single JSON array
+        id: combine
+        run: |
+          echo "Recebendo o objeto de saídas da matriz bruta:"
+          echo '${{ toJSON(needs.simulate-fetch-rpms.outputs) }}'
+          
+          # Esta é a etapa mágica que limpa os dados
+          JSON_STRING=$(echo '${{ toJSON(needs.simulate-fetch-rpms.outputs) }}' | jq -c '[.result[] | fromjson]')
+          
+          echo "--------------------------------------------------"
+          echo "Array JSON combinado e limpo que será passado adiante:"
+          echo "$JSON_STRING"
+          
+          echo "json_string=$JSON_STRING" >> $GITHUB_OUTPUT
+
+  # ETAPA 3: SIMULAR o trabalho que precisa receber os dados.
+  # Ele depende do trabalho coletor, não diretamente do trabalho da matriz.
+  simulate-create-pr:
+    runs-on: ubuntu-latest
+    needs: combine-outputs
+    steps:
+      - name: Restore YAML files from combined output
+        run: |
+          echo "--- Iniciando a restauração de arquivos a partir da saída combinada ---"
+
+          echo "[Passo 1/2] Obtendo o array JSON combinado do trabalho 'combine-outputs'..."
+          OUTPUTS_JSON='${{ needs.combine-outputs.outputs.all_results }}'
+          echo "Array JSON combinado recebido:"
+          echo "$OUTPUTS_JSON"
+          echo "--------------------------------------------------"
+
+          echo "[Passo 2/2] Extraindo, decodificando e verificando os arquivos..."
+          GPU_B64=$(echo "$OUTPUTS_JSON" | jq -r '.[] | select(.file_name=="os-updates.yaml") | .file_content_base_64')
+          NOGPU_B64=$(echo "$OUTPUTS_JSON" | jq -r '.[] | select(.file_name=="os-updates--no-gpu.yaml") | .file_content_base_64')
+
+          if [[ -z "$GPU_B64" ]] || [[ -z "$NOGPU_B64" ]]; then
+            echo "::error:: FALHA ao extrair o conteúdo de um ou ambos os arquivos YAML."
+            exit 1
+          fi
+
+          echo "Decodificando e criando arquivos..."
+          echo "$GPU_B64" | base64 --decode > os-updates.yaml
+          echo "$NOGPU_B64" | base64 --decode > os-updates--no-gpu.yaml
+
+          echo "--------------------------------------------------"
+          echo "VERIFICAÇÃO FINAL: Ambos os arquivos foram restaurados com sucesso!"
+          ls -l os-updates*.yaml
+          
+          echo -e "\n--- Conteúdo de os-updates.yaml ---"
+          cat os-updates.yaml
+          
+          echo -e "\n--- Conteúdo de os-updates--no-gpu.yaml ---"
+          cat os-updates--no-gpu.yaml
