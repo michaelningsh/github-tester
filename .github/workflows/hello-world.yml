@@ -63,7 +63,7 @@ jobs:
           echo "image_suffix=${SUFFIX}" >> $GITHUB_OUTPUT
           echo "image_type=${TYPE}" >> $GITHUB_OUTPUT
           echo "base_image=lws-base-image${SUFFIX}" >> $GITHUB_OUTPUT
-          echo "output_file=os-updates${SUFFIX}.yaml" >> $GITHUB_OUTPUT # 这是最终输出的合并文件
+          echo "output_file=os-updates${SUFFIX}.yaml" >> $GITHUB_OUTPUT
 
       - name: Prepare workdir
         run: mkdir -p ./tmp/${{ steps.prep.outputs.image_type }}/output
