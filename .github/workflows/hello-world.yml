@@ -79,11 +79,15 @@ jobs:
 
       # 移除 Build Docker image from rootfs
 
+      - name: Install tree
+        run: sudo apt-get update && sudo apt-get install -y tree
+        
       - name: Simulate Run list-os-updates.sh in container (copy mock XML)
         run: |
           # 直接将模拟的 updates.xml 复制到 /output 目录
           cp ${{ steps.prep.outputs.mock_updates_xml }} ./tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
           echo "[✓] Simulated. RPM update list is in tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml"
+          tree tmp/${{ steps.prep.outputs.image_type }}/
 
     #   - name: Convert new updates to Yaml
     #     id: convert
