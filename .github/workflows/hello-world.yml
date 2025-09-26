@@ -75,15 +75,15 @@ jobs:
             # 我们需要确保这个文件存在
             cp ${{ steps.prep.outputs.initial_os_updates_yaml }} ./tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
 
-    #   # 移除 Download and decompress RAW image from Artifactory
+      # 移除 Download and decompress RAW image from Artifactory
 
-    #   # 移除 Build Docker image from rootfs
+      # 移除 Build Docker image from rootfs
 
-    #   - name: Simulate Run list-os-updates.sh in container (copy mock XML)
-    #     run: |
-    #       # 直接将模拟的 updates.xml 复制到 /output 目录
-    #       cp ${{ steps.prep.outputs.mock_updates_xml }} ./tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
-    #       echo "[✓] Simulated. RPM update list is in tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml"
+      - name: Simulate Run list-os-updates.sh in container (copy mock XML)
+        run: |
+          # 直接将模拟的 updates.xml 复制到 /output 目录
+          cp ${{ steps.prep.outputs.mock_updates_xml }} ./tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
+          echo "[✓] Simulated. RPM update list is in tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml"
 
     #   - name: Convert new updates to Yaml
     #     id: convert
