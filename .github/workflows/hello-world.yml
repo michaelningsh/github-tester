@@ -106,7 +106,7 @@ jobs:
         id: collect-results
         run: |
           jq -s '.' results.json > all_outputs.json
-          echo "all_outputs=$(cat all_outputs.json)" >> $GITHUB_OUTPUT
+          echo "all_outputs=$(jq -c '.' all_outputs.json)" >> $GITHUB_OUTPUT
 
   create-pr:
     needs: [fetch-rpms]
@@ -125,12 +125,25 @@ jobs:
         run: |
           echo "--- Starting: Restore YAML files from matrix outputs ---"
           OUTPUTS_ARRAY='${{ needs.fetch-rpms.outputs.all_results }}'
+          echo "[Step 1] Raw JSON array from previous job:"
           echo "$OUTPUTS_ARRAY" | jq .
-          # 提取并恢复文件
+          echo "--------------------------------------------------"
+
+          # 遍历数组并恢复文件
           for row in $(echo "$OUTPUTS_ARRAY" | jq -c '.[]'); do
             FILE_NAME=$(echo "$row" | jq -r '.file_name')
             FILE_B64=$(echo "$row" | jq -r '.file_content_base_64')
-            echo "$FILE_B64" | base64 --decode > "$FILE_NAME"
-            echo "Restored $FILE_NAME"
+            IMAGE_TYPE=$(echo "$row" | jq -r '.image_type')
+            if [[ -n "$FILE_NAME" && -n "$FILE_B64" ]]; then
+              echo "[Step 2] Restoring $FILE_NAME (type: $IMAGE_TYPE)..."
+              echo "$FILE_B64" | base64 --decode > "$FILE_NAME"
+              echo "Restored $FILE_NAME"
+            else
+              echo "::error::Missing file_name or file_content_base_64 in matrix output!"
+              exit 1
+            fi
           done
+          echo "--------------------------------------------------"
+          echo "[Step 3] Verifying restored files:"
           ls -l os-updates*.yaml
+          echo "--- Finished: YAML files restored successfully ---"
