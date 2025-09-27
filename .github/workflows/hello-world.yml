@@ -105,6 +105,13 @@ jobs:
           echo "output_content=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
           echo "DEBUG: Setting Step Output for No-GPU: $JSON_PAYLOAD"
 
+      - name: Debug matrix outputs
+        run: |
+          echo "gpu-driver: ${{ matrix.gpu-driver }}"
+          echo "output_content: ${{ steps.export-result.outputs.output_content }}"
+
+
+
   create-pr:
     needs: [fetch-rpms]
     runs-on: ubuntu-latest
@@ -118,15 +125,9 @@ jobs:
       - name: Setup jq
         uses: dcarbone/install-jq-action@v3.2.0
 
+
       - name: Restore YAML files from matrix outputs
         run: |
-          # Restore YAML files from matrix outputs (简化版)
-          GPU_RAW_OUTPUT='${{ needs.fetch-rpms.outputs.result_gpu }}'
-          NOGPU_RAW_OUTPUT='${{ needs.fetch-rpms.outputs.result_nogpu }}'
+          echo "result_gpu: ${{ needs.fetch-rpms.outputs.result_gpu }}"
+          echo "result_nogpu: ${{ needs.fetch-rpms.outputs.result_nogpu }}"
 
-          echo "GPU_RAW_OUTPUT:"
-          echo "$GPU_RAW_OUTPUT"
-          echo "----------------------"
-          echo "NOGPU_RAW_OUTPUT:"
-          echo "$NOGPU_RAW_OUTPUT"
-          echo "----------------------"
