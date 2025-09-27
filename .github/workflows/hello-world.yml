@@ -164,7 +164,9 @@ jobs:
           NOGPU_RAW_OUTPUT='${{ needs.fetch-rpms.outputs.result_nogpu }}'
           
           # 将这两个原始 JSON 字符串解析成 JSON 对象，并组合成一个 JSON 数组
-          OUTPUTS_ARRAY=$(echo "$GPU_RAW_OUTPUT" | jq fromjson && echo "$NOGPU_RAW_OUTPUT" | jq fromjson | jq -s '.')
+          OUTPUTS_ARRAY=$(echo "$GPU_RAW_OUTPUT" | jq fromjson ; echo "$NOGPU_RAW_OUTPUT" | jq fromjson )
+          OUTPUTS_ARRAY=$(echo "$OUTPUTS_ARRAY" | jq -s '.')
+
 
           echo "Processed JSON Array (should contain two objects):"
           echo "$OUTPUTS_ARRAY"
