@@ -54,16 +54,19 @@ jobs:
             TYPE="gpu"
             echo "initial_os_updates_yaml=./os-updates.yaml" >> $GITHUB_OUTPUT
             echo "mock_updates_xml=./mock_data/updates_gpu.xml" >> $GITHUB_OUTPUT
+            echo "output_target=result_gpu" >> $GITHUB_OUTPUT # 指明要更新哪个 Job Output
           else
             SUFFIX="--no-gpu"
             TYPE="no-gpu"
             echo "initial_os_updates_yaml=./os-updates--no-gpu.yaml" >> $GITHUB_OUTPUT
             echo "mock_updates_xml=./mock_data/updates_no_gpu.xml" >> $GITHUB_OUTPUT
+            echo "output_target=result_nogpu" >> $GITHUB_OUTPUT # 指明要更新哪个 Job Output
           fi
           echo "image_suffix=${SUFFIX}" >> $GITHUB_OUTPUT
           echo "image_type=${TYPE}" >> $GITHUB_OUTPUT
           echo "base_image=lws-base-image${SUFFIX}" >> $GITHUB_OUTPUT
           echo "output_file=os-updates${SUFFIX}.yaml" >> $GITHUB_OUTPUT
+
 
       - name: Prepare workdir
         run: |
@@ -111,15 +114,18 @@ jobs:
             ) as $mergedArray
             | select(fi == 0) | (eval(strenv(originalPath))) = $mergedArray
             ' tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }} tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
-            
-      - name: Encode file and set as output
-        id: export-result
+
+      - name: Encode file and set as job output
         run: |
           echo "==== Final merged YAML ===="
           cat tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
           ENCODED_STRING=$(base64 -w 0 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }})
-          JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')
-          echo "${{ steps.prep.outputs.output_id }}=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
+          JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')          
+          # 直接设置 Job Outputs。注意这里是设置 Job Outputs，而不是 Step Outputs
+          # 使用特殊的环境变量来更新 Job 的输出
+          echo "${{ steps.prep.outputs.output_target }}=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
+          # 为了调试，也打印出这个变量的值
+          echo "DEBUG: Setting Job Output: ${{ steps.prep.outputs.output_target }}=$JSON_PAYLOAD"
 
   create-pr:
     needs: [fetch-rpms]
