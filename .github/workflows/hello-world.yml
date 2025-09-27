@@ -191,4 +191,16 @@ jobs:
 
             echo "[Step 5/5] Verifying the restored files..."
             ls -l os-updates*.yaml
+            echo ""
+
+            echo "--- Content of os-updates.yaml ---"
+            cat os-updates.yaml
+            echo "----------------------------------"
+            echo ""
+
+            echo "--- Content of os-updates--no-gpu.yaml ---"
+            cat os-updates--no-gpu.yaml
+            echo "----------------------------------------"
+            echo ""
+
             echo "--- Finished: YAML files restored successfully ---"
