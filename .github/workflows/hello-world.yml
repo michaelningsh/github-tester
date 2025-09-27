@@ -33,14 +33,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 模拟时不需要 JFrog CLI，如果其他部分需要可以保留
-      # - name: Setup JFrog CLI
-      #   uses: jfrog/setup-jfrog-cli@v4
-      #   env:
-      #     JF_URL: https://artifactory-ehv.ta.philips.com/
-      #     JF_USER: ${{ secrets.ARTIFACTORY_USERNAME }}
-      #     JF_PASSWORD: ${{ secrets.ARTIFACTORY_APIKEY }}
-
       - name: Install dependencies
         run: |
           sudo apt-get update
