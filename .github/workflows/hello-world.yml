@@ -24,8 +24,8 @@ jobs:
       matrix:
         gpu-driver: [true, false]
     outputs:
-      result_gpu: ${{ steps.export-result.outputs.output_content }}
-      result_nogpu: ${{ steps.export-result.outputs.output_content }}
+      result_gpu:   ${{ matrix.gpu-driver == 'true' && steps.export-result.outputs.output_content || '' }}
+      result_nogpu: ${{ matrix.gpu-driver == 'false' && steps.export-result.outputs.output_content || '' }}
     steps:
       - name: Checkout # 必须先检出仓库才能访问模拟文件
         uses: actions/checkout@v4
@@ -104,7 +104,6 @@ jobs:
           JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" --arg type "${{ steps.prep.outputs.image_type }}" '{file_name: $name, file_content_base_64: $content, image_type: $type}')
           echo "output_content=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
           echo "DEBUG: Setting Step Output for No-GPU: $JSON_PAYLOAD"
-
 
   create-pr:
     needs: [fetch-rpms]
