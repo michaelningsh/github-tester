@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:   # 手动触发
+  workflow_dispatch:
 
 jobs:
   hello:
@@ -24,7 +24,8 @@ jobs:
       matrix:
         gpu-driver: [true, false]
     outputs:
-      all_results: ${{ steps.collect-results.outputs.all_outputs }}
+      gpu_result: ${{ matrix.gpu-driver == 'true' && steps.export-result.outputs.output_content || '' }}
+      nogpu_result: ${{ matrix.gpu-driver == 'false' && steps.export-result.outputs.output_content || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,12 +72,12 @@ jobs:
           cmd: |
             yq -px -oy '{"updates": [.stream.update-status.update-list.update[] | {"name": .["+@name"], "version": .["+@edition"] | split("-") | .[0] }]}' \
               tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
- 
+
       - name: Save updates.yaml
         run: |
           echo '${{ steps.convert.outputs.result }}' > tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
           tree tmp/${{ steps.prep.outputs.image_type }}/
-            
+
       - name: Merge existing with new OS updates
         uses: mikefarah/yq@v4.46.1
         with:
@@ -99,14 +100,7 @@ jobs:
         run: |
           ENCODED_STRING=$(base64 -w 0 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }})
           JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" --arg type "${{ steps.prep.outputs.image_type }}" '{file_name: $name, file_content_base_64: $content, image_type: $type}')
-          echo "$JSON_PAYLOAD" >> results.json
           echo "output_content=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
-
-      - name: Collect all matrix results to array
-        id: collect-results
-        run: |
-          jq -s '.' results.json > all_outputs.json
-          echo "all_outputs=$(jq -c '.' all_outputs.json)" >> $GITHUB_OUTPUT
 
   create-pr:
     needs: [fetch-rpms]
@@ -121,15 +115,24 @@ jobs:
       - name: Setup jq
         uses: dcarbone/install-jq-action@v3.2.0
 
+      - name: Combine matrix outputs to array
+        id: combine-results
+        run: |
+          ARR="["
+          if [[ -n '${{ needs.fetch-rpms.outputs.gpu_result }}' ]]; then
+            ARR="$ARR${{ needs.fetch-rpms.outputs.gpu_result }}"
+          fi
+          if [[ -n '${{ needs.fetch-rpms.outputs.nogpu_result }}' ]]; then
+            if [[ "$ARR" != "[" ]]; then ARR="$ARR,"; fi
+            ARR="$ARR${{ needs.fetch-rpms.outputs.nogpu_result }}"
+          fi
+          ARR="$ARR]"
+          echo "$ARR" > all_results.json
+          cat all_results.json | jq .
+
       - name: Restore YAML files from matrix outputs
         run: |
-          echo "--- Starting: Restore YAML files from matrix outputs ---"
-          OUTPUTS_ARRAY='${{ needs.fetch-rpms.outputs.all_results }}'
-          echo "[Step 1] Raw JSON array from previous job:"
-          echo "$OUTPUTS_ARRAY" | jq .
-          echo "--------------------------------------------------"
-
-          # 遍历数组并恢复文件
+          OUTPUTS_ARRAY=$(cat all_results.json)
           for row in $(echo "$OUTPUTS_ARRAY" | jq -c '.[]'); do
             FILE_NAME=$(echo "$row" | jq -r '.file_name')
             FILE_B64=$(echo "$row" | jq -r '.file_content_base_64')
