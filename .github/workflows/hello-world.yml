@@ -24,8 +24,9 @@ jobs:
       matrix:
         gpu-driver: [true, false]
     outputs:
-      result: ${{ steps.export-result.outputs.result }}
-
+      result_gpu: ${{ steps.export-gpu-result.outputs.output_content }}
+      result_nogpu: ${{ steps.export-nogpu-result.outputs.output_content }}
+      
     steps:
       - name: Checkout # 必须先检出仓库才能访问模拟文件
         uses: actions/checkout@v4 # 使用 v4 或您指定的 SHA
@@ -54,13 +55,11 @@ jobs:
             TYPE="gpu"
             echo "initial_os_updates_yaml=./os-updates.yaml" >> $GITHUB_OUTPUT
             echo "mock_updates_xml=./mock_data/updates_gpu.xml" >> $GITHUB_OUTPUT
-            echo "output_target=result_gpu" >> $GITHUB_OUTPUT # 指明要更新哪个 Job Output
           else
             SUFFIX="--no-gpu"
             TYPE="no-gpu"
             echo "initial_os_updates_yaml=./os-updates--no-gpu.yaml" >> $GITHUB_OUTPUT
             echo "mock_updates_xml=./mock_data/updates_no_gpu.xml" >> $GITHUB_OUTPUT
-            echo "output_target=result_nogpu" >> $GITHUB_OUTPUT # 指明要更新哪个 Job Output
           fi
           echo "image_suffix=${SUFFIX}" >> $GITHUB_OUTPUT
           echo "image_type=${TYPE}" >> $GITHUB_OUTPUT
@@ -115,17 +114,30 @@ jobs:
             | select(fi == 0) | (eval(strenv(originalPath))) = $mergedArray
             ' tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }} tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
 
-      - name: Encode file and set as job output
+      - name: Encode GPU file and set as job output
+        id: export-gpu-result # 新增 ID
+        if: ${{ matrix.gpu-driver == true }} # 仅在 gpu-driver 为 true 时运行
         run: |
-          echo "==== Final merged YAML ===="
+          echo "==== Final merged YAML for GPU ===="
           cat tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
           ENCODED_STRING=$(base64 -w 0 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }})
           JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')          
-          # 直接设置 Job Outputs。注意这里是设置 Job Outputs，而不是 Step Outputs
-          # 使用特殊的环境变量来更新 Job 的输出
-          echo "${{ steps.prep.outputs.output_target }}=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
-          # 为了调试，也打印出这个变量的值
-          echo "DEBUG: Setting Job Output: ${{ steps.prep.outputs.output_target }}=$JSON_PAYLOAD"
+          # 设置此步骤的输出，然后 Job 的 outputs 引用此步骤输出
+          echo "output_content=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
+          echo "DEBUG: Setting Step Output for GPU: $JSON_PAYLOAD"
+
+      - name: Encode No-GPU file and set as job output
+        id: export-nogpu-result # 新增 ID
+        if: ${{ matrix.gpu-driver == false }} # 仅在 gpu-driver 为 false 时运行
+        run: |
+          echo "==== Final merged YAML for No-GPU ===="
+          cat tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
+          ENCODED_STRING=$(base64 -w 0 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }})
+          JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" '{file_name: $name, file_content_base_64: $content}')          
+          # 设置此步骤的输出，然后 Job 的 outputs 引用此步骤输出
+          echo "output_content=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
+          echo "DEBUG: Setting Step Output for No-GPU: $JSON_PAYLOAD"
+
 
   create-pr:
     needs: [fetch-rpms]
