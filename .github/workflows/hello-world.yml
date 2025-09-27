@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch:   # 手动触发
 
 jobs:
   hello:
@@ -24,11 +24,13 @@ jobs:
       matrix:
         gpu-driver: [true, false]
     outputs:
-      gpu_result: ${{ matrix.gpu-driver == 'true' && steps.export-result.outputs.output_content || '' }}
-      nogpu_result: ${{ matrix.gpu-driver == 'false' && steps.export-result.outputs.output_content || '' }}
+      result_gpu: ${{ steps.export-result.outputs.output_content }}
+      result_nogpu: ${{ steps.export-result.outputs.output_content }}
     steps:
-      - name: Checkout
+      - name: Checkout # 必须先检出仓库才能访问模拟文件
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install dependencies
         run: |
@@ -72,12 +74,12 @@ jobs:
           cmd: |
             yq -px -oy '{"updates": [.stream.update-status.update-list.update[] | {"name": .["+@name"], "version": .["+@edition"] | split("-") | .[0] }]}' \
               tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
-
+ 
       - name: Save updates.yaml
         run: |
           echo '${{ steps.convert.outputs.result }}' > tmp/${{ steps.prep.outputs.image_type }}/output/updates.yaml
           tree tmp/${{ steps.prep.outputs.image_type }}/
-
+            
       - name: Merge existing with new OS updates
         uses: mikefarah/yq@v4.46.1
         with:
@@ -95,12 +97,14 @@ jobs:
           echo "==== Merged OS Updates ===="
           cat tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
 
-      - name: Encode merged YAML and set as step output
+      - name: Encode merged YAML and set as job output
         id: export-result
         run: |
           ENCODED_STRING=$(base64 -w 0 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }})
           JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" --arg type "${{ steps.prep.outputs.image_type }}" '{file_name: $name, file_content_base_64: $content, image_type: $type}')
           echo "output_content=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
+          echo "DEBUG: Setting Step Output for No-GPU: $JSON_PAYLOAD"
+
 
   create-pr:
     needs: [fetch-rpms]
@@ -110,43 +114,68 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.1.7
 
       - name: Setup jq
         uses: dcarbone/install-jq-action@v3.2.0
 
-      - name: Combine matrix outputs to array
-        id: combine-results
-        run: |
-          ARR="["
-          if [[ -n '${{ needs.fetch-rpms.outputs.gpu_result }}' ]]; then
-            ARR="$ARR${{ needs.fetch-rpms.outputs.gpu_result }}"
-          fi
-          if [[ -n '${{ needs.fetch-rpms.outputs.nogpu_result }}' ]]; then
-            if [[ "$ARR" != "[" ]]; then ARR="$ARR,"; fi
-            ARR="$ARR${{ needs.fetch-rpms.outputs.nogpu_result }}"
-          fi
-          ARR="$ARR]"
-          echo "$ARR" > all_results.json
-          cat all_results.json | jq .
-
       - name: Restore YAML files from matrix outputs
         run: |
-          OUTPUTS_ARRAY=$(cat all_results.json)
-          for row in $(echo "$OUTPUTS_ARRAY" | jq -c '.[]'); do
-            FILE_NAME=$(echo "$row" | jq -r '.file_name')
-            FILE_B64=$(echo "$row" | jq -r '.file_content_base_64')
-            IMAGE_TYPE=$(echo "$row" | jq -r '.image_type')
-            if [[ -n "$FILE_NAME" && -n "$FILE_B64" ]]; then
-              echo "[Step 2] Restoring $FILE_NAME (type: $IMAGE_TYPE)..."
-              echo "$FILE_B64" | base64 --decode > "$FILE_NAME"
-              echo "Restored $FILE_NAME"
+            echo "--- Starting: Restore YAML files from matrix outputs ---"
+
+            echo "[Step 1/5] Getting the raw JSON outputs from the 'fetch-rpms' job..."
+
+            GPU_RAW_OUTPUT='{"file_name":"os-updates.yaml","file_content_base_64":"dXBkYXRlczoKICAtIG5hbWU6IGV4aXN0aW5nLWtlcm5lbAogICAgdmVyc2lvbjogNS4xNS4wCiAgLSBuYW1lOiBleGlzdGluZy1wYWNrYWdlLXh6CiAgICB2ZXJzaW9uOiA1LjIuNQogIC0gbmFtZToga2VybmVsLWRlZmF1bHQKICAgIHZlcnNpb246IDYuNC4wCiAgLSBuYW1lOiB4egogICAgdmVyc2lvbjogNS40LjMKICAtIG5hbWU6IHNvbWUtb3RoZXItcGFja2FnZQogICAgdmVyc2lvbjogMS4wLjAK"}'
+            NOGPU_RAW_OUTPUT='{"file_name":"os-updates--no-gpu.yaml","file_content_base_64":"dXBkYXRlczoKICAtIG5hbWU6IGV4aXN0aW5nLWNvcmV1dGlscwogICAgdmVyc2lvbjogIjguMzIiCiAgLSBuYW1lOiBleGlzdGluZy16eXBwZXIKICAgIHZlcnNpb246IDEuMTQuNjMKICAtIG5hbWU6IGNvcmV1dGlscwogICAgdmVyc2lvbjogIjkuNCIKICAtIG5hbWU6IHp5cHBlci1uZWVkcy1yZXN0YXJ0aW5nCiAgICB2ZXJzaW9uOiAxLjE0LjkzCiAgLSBuYW1lOiBhbm90aGVyLW5vLWdwdS1wYWNrYWdlCiAgICB2ZXJzaW9uOiAyLjAuMAo="}'
+
+            # 直接组合成 JSON 数组
+            OUTPUTS_ARRAY=$(echo "$GPU_RAW_OUTPUT"; echo "$NOGPU_RAW_OUTPUT" ) 
+            OUTPUTS_ARRAY=$(echo "$OUTPUTS_ARRAY" | jq -s '.')
+
+            echo "Processed JSON Array (should contain two objects):"
+            echo "$OUTPUTS_ARRAY"
+            echo "--------------------------------------------------"
+
+            echo "[Step 2/5] Using jq to extract Base64 encoded file content..."
+            GPU_B64=$(echo "$OUTPUTS_ARRAY" | jq -r '.[] | select(.file_name=="os-updates.yaml") | .file_content_base_64')
+            NOGPU_B64=$(echo "$OUTPUTS_ARRAY" | jq -r '.[] | select(.file_name=="os-updates--no-gpu.yaml") | .file_content_base_64')
+
+            echo "Extracted content for 'os-updates.yaml' (first 50 chars): $(echo -n "$GPU_B64" | head -c 50)..."
+            echo "Extracted content for 'os-updates--no-gpu.yaml' (first 50 chars): $(echo -n "$NOGPU_B64" | head -c 50)..."
+            echo "--------------------------------------------------"
+
+            echo "[Step 3/5] Restoring os-updates.yaml..."
+            if [[ -n "$GPU_B64" ]]; then
+            echo "$GPU_B64" | base64 --decode > os-updates.yaml
+            echo "Successfully created the os-updates.yaml file."
             else
-              echo "::error::Missing file_name or file_content_base_64 in matrix output!"
-              exit 1
+            echo "::error::Failed to find or extract the output content for 'os-updates.yaml'."
+            exit 1
             fi
-          done
-          echo "--------------------------------------------------"
-          echo "[Step 3] Verifying restored files:"
-          ls -l os-updates*.yaml
-          echo "--- Finished: YAML files restored successfully ---"
+            echo "--------------------------------------------------"
+
+            echo "[Step 4/5] Restoring os-updates--no-gpu.yaml..."
+            if [[ -n "$NOGPU_B64" ]]; then
+            echo "$NOGPU_B64" | base64 --decode > os-updates--no-gpu.yaml
+            echo "Successfully created the os-updates--no-gpu.yaml file."
+            else
+            echo "::error::Failed to find or extract the output content for 'os-updates--no-gpu.yaml'."
+            exit 1
+            fi
+            echo "--------------------------------------------------"
+
+            echo "[Step 5/5] Verifying the restored files..."
+            ls -l os-updates*.yaml
+            echo ""
+
+            echo "--- Content of os-updates.yaml ---"
+            cat os-updates.yaml
+            echo "----------------------------------"
+            echo ""
+
+            echo "--- Content of os-updates--no-gpu.yaml ---"
+            cat os-updates--no-gpu.yaml
+            echo "----------------------------------------"
+            echo ""
+
+            echo "--- Finished: YAML files restored successfully ---"
