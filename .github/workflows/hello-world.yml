@@ -61,6 +61,7 @@ jobs:
           mkdir -p ./tmp/${{ steps.prep.outputs.image_type }}/output
           cp ${{ steps.prep.outputs.initial_os_updates_yaml }} ./tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
 
+          
       - name: Simulate Run list-os-updates.sh in container (copy mock XML)
         run: |
           cp ${{ steps.prep.outputs.mock_updates_xml }} ./tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
