@@ -23,9 +23,10 @@ jobs:
       fail-fast: false
       matrix:
         gpu-driver: [true, false]
-    outputs:
-      result_gpu:   ${{ matrix.gpu-driver == 'true' && steps.export-result.outputs.output_content || '' }}
-      result_nogpu: ${{ matrix.gpu-driver == 'false' && steps.export-result.outputs.output_content || '' }}
+    # REMOVED: 不再需要使用 job outputs 来传递文件内容
+    # outputs:
+    #   result_gpu:   ${{ matrix.gpu-driver == 'true' && steps.export-result.outputs.output_content || '' }}
+    #   result_nogpu: ${{ matrix.gpu-driver == 'false' && steps.export-result.outputs.output_content || '' }}
     steps:
       - name: Checkout # 必须先检出仓库才能访问模拟文件
         uses: actions/checkout@v4
@@ -61,7 +62,6 @@ jobs:
           mkdir -p ./tmp/${{ steps.prep.outputs.image_type }}/output
           cp ${{ steps.prep.outputs.initial_os_updates_yaml }} ./tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
 
-          
       - name: Simulate Run list-os-updates.sh in container (copy mock XML)
         run: |
           cp ${{ steps.prep.outputs.mock_updates_xml }} ./tmp/${{ steps.prep.outputs.image_type }}/output/updates.xml
@@ -95,22 +95,22 @@ jobs:
 
       - name: Print merged OS updates
         run: |
-          echo "==== Merged OS Updates ===="
+          echo "==== Merged OS Updates for ${{ steps.prep.outputs.image_type }} ===="
           cat tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
 
-      - name: Encode merged YAML and set as job output
-        id: export-result
-        run: |
-          ENCODED_STRING=$(base64 -w 0 tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }})
-          JSON_PAYLOAD=$(jq -cn --arg name "${{ steps.prep.outputs.output_file }}" --arg content "$ENCODED_STRING" --arg type "${{ steps.prep.outputs.image_type }}" '{file_name: $name, file_content_base_64: $content, image_type: $type}')
-          echo "output_content=$JSON_PAYLOAD" >> $GITHUB_OUTPUT
-          echo "DEBUG: Setting Step Output for No-GPU: $JSON_PAYLOAD"
-
-      - name: Debug matrix outputs
-        run: |
-          echo "gpu-driver: ${{ matrix.gpu-driver }}"
-          echo "output_content: ${{ steps.export-result.outputs.output_content }}"
-
+      # --- 修改部分 START ---
+      # 移除了 "Encode merged YAML and set as job output" 步骤
+      # 替换为上传构件
+      - name: Upload merged YAML as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # 为每个构件提供一个基于矩阵变量的唯一名称
+          name: os-updates-${{ steps.prep.outputs.image_type }}
+          # 指定要上传的文件路径
+          path: tmp/${{ steps.prep.outputs.image_type }}/${{ steps.prep.outputs.output_file }}
+          # 可选：设置构件的保留天数
+          retention-days: 1
+      # --- 修改部分 END ---
 
 
   create-pr:
@@ -121,14 +121,35 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.1.7
+        uses: actions/checkout@v4
 
-      - name: Setup jq
-        uses: dcarbone/install-jq-action@v3.2.0
+      # --- 修改部分 START ---
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          # 不指定 name，会下载本次工作流程运行产生的所有构件
+          # 下载的文件会存放在指定的 path 目录下
+          path: ./artifacts
 
-
-      - name: Restore YAML files from matrix outputs
+      - name: Display downloaded artifacts structure
         run: |
-          echo "result_gpu: ${{ needs.fetch-rpms.outputs.result_gpu }}"
-          echo "result_nogpu: ${{ needs.fetch-rpms.outputs.result_nogpu }}"
+          echo "Artifacts downloaded to ./artifacts"
+          tree ./artifacts
+          # 预期目录结构:
+          # ./artifacts
+          # ├── os-updates-gpu
+          # │   └── os-updates.yaml
+          # └── os-updates-no-gpu
+          #     └── os-updates--no-gpu.yaml
 
+      - name: Restore YAML files from artifacts
+        run: |
+          echo "Restoring YAML files to the working directory..."
+          # 将下载的文件从各自的子目录移动到根目录，以便后续步骤使用
+          # 使用 find 命令可以更灵活地处理文件
+          find ./artifacts -type f -name "*.yaml" -exec mv {} . \;
+          
+          echo "Files in the current directory:"
+          ls -l
+      # --- 修改部分 END ---
+      
