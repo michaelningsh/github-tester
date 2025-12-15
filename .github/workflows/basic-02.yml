@@ -1,0 +1,77 @@
+name: Survey All GitHub Runners Disk Size
+
+on:
+  workflow_dispatch:   # 手动触发
+
+jobs:
+  survey-runners:
+    strategy:
+      fail-fast: false  # 即使某个失败也继续其他的
+      matrix:
+        runner:
+          # Ubuntu runners
+          - ubuntu-latest
+          - ubuntu-24.04
+          - ubuntu-22.04
+          - ubuntu-20.04
+          # Larger runners (需要 GitHub Team/Enterprise)
+          - ubuntu-latest-4-cores
+          - ubuntu-latest-8-cores
+          - ubuntu-latest-16-cores
+    
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: true  # 某些 runner 可能不可用
+    
+    steps:
+      - name: System Info (Linux)
+        run: |
+          echo "================================"
+          echo "Runner: ${{ matrix.runner }}"
+          echo "Runner OS: $RUNNER_OS"
+          echo "Runner Arch: $RUNNER_ARCH"
+          echo "================================"
+          uname -a
+          echo ""
+          echo "--- Disk Information (lsblk) ---"
+          lsblk -o NAME,SIZE,TYPE,MOUNTPOINT
+          echo ""
+          echo "--- Disk Usage (df -h) ---"
+          df -h
+          echo ""
+          echo "--- Disk Free Space Summary ---"
+          df -h / | awk 'NR==2 {print "Root: " $2 " total, " $4 " available"}'
+          df -h /mnt | awk 'NR==2 {print "/mnt: " $2 " total, " $4 " available"}' 2>/dev/null || echo "/mnt: Not available"
+          echo ""
+          echo "--- Memory Info ---"
+          free -h
+          echo ""
+          echo "--- CPU Info ---"
+          echo "CPU Cores: $(nproc)"
+          lscpu | grep -E "Model name|CPU\(s\):|Thread|Core|Socket"
+          echo ""
+          echo "--- Runner Environment ---"
+          echo "RUNNER_NAME: $RUNNER_NAME"
+          echo "RUNNER_WORKSPACE: $RUNNER_WORKSPACE"
+          echo "RUNNER_TEMP: $RUNNER_TEMP"
+          echo "RUNNER_TOOL_CACHE: $RUNNER_TOOL_CACHE"
+
+  # Summary job
+  summary:
+    runs-on: ubuntu-latest
+    needs: survey-runners
+    if: always()
+    steps:
+      - name: Survey Complete
+        run: |
+          echo "================================"
+          echo "✅ GitHub Ubuntu Runners Survey Complete"
+          echo "================================"
+          echo ""
+          echo "Tested runner types:"
+          echo "  - Ubuntu: latest, 24.04, 22.04, 20.04"
+          echo "  - Larger runners: 4/8/16-cores (if available)"
+          echo ""
+          echo "📊 Results Summary:"
+          echo "  - Check individual job logs above for detailed disk information"
+          echo ""
+          echo "💡 Tip: Look for 'Disk Free Space Summary' in each job log for quick overview"

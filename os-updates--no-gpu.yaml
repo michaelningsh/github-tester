@@ -1,5 +1,137 @@
 updates:
-  - name: existing-coreutils
-    version: "8.32"
-  - name: existing-zypper
-    version: 1.14.63
+  - name: SL-Micro-release
+    version: 6.1-slfo.1.11.69
+  - name: aaa_base
+    version: 84.87+git20250903.33e5ba4-slfo.1.1_1.1
+  - name: audit
+    version: 3.1.1-slfo.1.1_2.1
+  - name: chrony
+    version: 4.8-slfo.1.1_1.1
+  - name: chrony-pool-suse
+    version: 4.8-slfo.1.1_1.1
+  - name: coreutils
+    version: 9.4-slfo.1.1_2.1
+  - name: coreutils-systemd
+    version: 9.4-slfo.1.1_2.1
+  - name: curl
+    version: 8.14.1-slfo.1.1_2.1
+  - name: dracut
+    version: 059+suse.641.g906a3d31-slfo.1.1_1.1
+  - name: dracut-fips
+    version: 059+suse.641.g906a3d31-slfo.1.1_1.1
+  - name: glib2-tools
+    version: 2.78.6-slfo.1.1_5.1
+  - name: grub2
+    version: 2.12-slfo.1.1_3.1
+  - name: grub2-i386-pc
+    version: 2.12-slfo.1.1_3.1
+  - name: grub2-snapper-plugin
+    version: 2.12-slfo.1.1_3.1
+  - name: grub2-x86_64-efi
+    version: 2.12-slfo.1.1_3.1
+  - name: kernel-default
+    version: 6.4.0-36.1
+  - name: kmod
+    version: 32-slfo.1.1_2.1
+  - name: libaudit1
+    version: 3.1.1-slfo.1.1_2.1
+  - name: libauparse0
+    version: 3.1.1-slfo.1.1_2.1
+  - name: libcurl4
+    version: 8.14.1-slfo.1.1_2.1
+  - name: libexpat1
+    version: 2.7.1-slfo.1.1_3.1
+  - name: libfreebl3
+    version: 3.112.2-slfo.1.1_1.1
+  - name: libgcrypt20
+    version: 1.10.3-slfo.1.1_3.1
+  - name: libgio-2_0-0
+    version: 2.78.6-slfo.1.1_5.1
+  - name: libglib-2_0-0
+    version: 2.78.6-slfo.1.1_5.1
+  - name: libgmodule-2_0-0
+    version: 2.78.6-slfo.1.1_5.1
+  - name: libgobject-2_0-0
+    version: 2.78.6-slfo.1.1_5.1
+  - name: libgpgme11
+    version: 1.23.0-slfo.1.1_2.1
+  - name: libkmod2
+    version: 32-slfo.1.1_2.1
+  - name: liblzma5
+    version: 5.4.3-slfo.1.1_2.1
+  - name: libopenssl-3-fips-provider
+    version: 3.1.4-slfo.1.1_7.1
+  - name: libopenssl3
+    version: 3.1.4-slfo.1.1_7.1
+  - name: libpolkit-agent-1-0
+    version: 121-slfo.1.1_2.1
+  - name: libpolkit-gobject-1-0
+    version: 121-slfo.1.1_2.1
+  - name: libprotobuf23_4_0
+    version: 23.4-slfo.1.1_2.1
+  - name: libpython3_11-1_0
+    version: 3.11.13-slfo.1.1_2.1
+  - name: libsoftokn3
+    version: 3.112.2-slfo.1.1_1.1
+  - name: libsqlite3-0
+    version: 3.50.4-slfo.1.1_1.1
+  - name: libssh-config
+    version: 0.10.6-slfo.1.1_3.1
+  - name: libssh4
+    version: 0.10.6-slfo.1.1_3.1
+  - name: libsystemd0
+    version: 254.27-slfo.1.1_1.1
+  - name: libtss2-tcti-tabrmd0
+    version: 3.0.0-slfo.1.1_2.1
+  - name: libudev1
+    version: 254.27-slfo.1.1_1.1
+  - name: libzypp
+    version: 17.37.18-slfo.1.1_1.1
+  - name: mozilla-nspr
+    version: 4.36-slfo.1.1_1.1
+  - name: mozilla-nss
+    version: 3.112.2-slfo.1.1_1.1
+  - name: mozilla-nss-certs
+    version: 3.112.2-slfo.1.1_1.1
+  - name: openssl-3
+    version: 3.1.4-slfo.1.1_7.1
+  - name: pam
+    version: 1.6.1-slfo.1.1_4.1
+  - name: podman
+    version: 5.4.2-slfo.1.1_2.1
+  - name: polkit
+    version: 121-slfo.1.1_2.1
+  - name: python311
+    version: 3.11.13-slfo.1.1_2.1
+  - name: python311-base
+    version: 3.11.13-slfo.1.1_2.1
+  - name: selinux-policy
+    version: 20241031+git12.52417acff-slfo.1.1_1.1
+  - name: selinux-policy-targeted
+    version: 20241031+git12.52417acff-slfo.1.1_1.1
+  - name: suse-build-key
+    version: 12.0-slfo.1.1_4.1
+  - name: system-group-audit
+    version: 3.1.1-slfo.1.1_2.1
+  - name: systemd
+    version: 254.27-slfo.1.1_1.1
+  - name: systemd-coredump
+    version: 254.27-slfo.1.1_1.1
+  - name: tpm2.0-abrmd
+    version: 3.0.0-slfo.1.1_2.1
+  - name: ucode-intel
+    version: 20250812-slfo.1.1_1.1
+  - name: udev
+    version: 254.27-slfo.1.1_1.1
+  - name: update-alternatives
+    version: 1.22.0-slfo.1.1_2.1
+  - name: vim-data-common
+    version: 9.1.1629-slfo.1.1_1.1
+  - name: vim-small
+    version: 9.1.1629-slfo.1.1_1.1
+  - name: xz
+    version: 5.4.3-slfo.1.1_2.1
+  - name: zypper
+    version: 1.14.94-slfo.1.1_1.1
+  - name: zypper-needs-restarting
+    version: 1.14.94-slfo.1.1_1.1
